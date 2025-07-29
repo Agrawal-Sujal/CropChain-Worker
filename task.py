@@ -2,12 +2,12 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from .run_ai_on_images import run_ai_on_image
-from .upload_result import uploadResult
+from run_ai_on_images import run_ai_on_image
+from upload_result import uploadResult
 from web3 import AsyncWeb3, WebSocketProvider, HTTPProvider
 from web3.utils.subscriptions import LogsSubscription, LogsSubscriptionContext
 from web3._utils.events import get_event_data
-from .send_notification_to_server import sendNotification
+from send_notification_to_server import sendNotification
 from dotenv import load_dotenv
 from web3 import Web3
 
