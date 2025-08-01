@@ -1,5 +1,5 @@
 import asyncio
-import logging
+
 import os
 from pathlib import Path
 from run_ai_on_images import run_ai_on_image
@@ -80,11 +80,93 @@ async def log_handler(handler_context: LogsSubscriptionContext) -> None:
             farmer_info = contract.functions.farmer_map(user).call()
             aadharId = farmer_info[1]
             print(f"Farmer Aadhar ID: {aadharId}")
+            title = "AI Review Done!!"
+            MAX_BODY_LENGTH = 200
 
-            await sendNotification(aadharId)
+            body = result
+            if len(body) > MAX_BODY_LENGTH:
+                body = body[:MAX_BODY_LENGTH].rstrip() + "..."
+
+            await sendNotification(aadharId,title,body)
     except Exception as e:
-        print(f"Error in log_handler: {e}", exc_info=True)
+        print(f"Error in log_handler: {e}")
 
+
+async def verifyImageLogHandler(handler_context: LogsSubscriptionContext)-> None:
+    try:
+        log = handler_context.result
+        event_abi = {
+            "anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_user","type":"address"},{"indexed":False,"internalType":"string","name":"imageUrl","type":"string"},{"indexed":False,"internalType":"bool","name":"choice","type":"bool"}],"name":"ImageVerified","type":"event"
+            }
+        w3 = handler_context.async_w3
+        decoded = get_event_data(w3.codec, event_abi, log)
+        urls = decoded["args"]["imageUrl"].split("$$$")
+        print("New VerifyImage Event:")
+        print(f"User: {decoded['args']['_user']}")
+        print(f"URL: {decoded['args']['imageUrl']}")
+        print(f"Transaction Hash: {log['transactionHash'].hex() if hasattr(log['transactionHash'], 'hex') else log['transactionHash']}")
+        user = decoded["args"]["_user"]
+        choice = decoded["args"]["choice"]
+        for url in urls:
+            web3 = Web3(Web3.HTTPProvider(os.getenv('HTTP_PROVIDER_1')))
+            if not web3.is_connected():
+                print("Failed to connect to Ethereum network")
+                return False
+            
+            print("Connected to Ethereum network")
+        
+            contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)
+            print(f"Contract loaded at address: {CONTRACT_ADDRESS}")
+        
+            print("Fetching scientist information from blockchain...")
+            farmer_info = contract.functions.farmer_map(user).call()
+            aadharId = farmer_info[1]
+            print(f"Scientist Aadhar ID: {aadharId}")
+            if(choice==True):
+                body = "Your review got positive response"
+            else :
+                body = "Your review got negative response"
+            await sendNotification(aadharId,title = "Review Verify",body = body)
+    except Exception as e:
+        print(f"Error in verifyImageLogHandler: {e}")
+
+async def ReviewImageLogHandler(handler_context: LogsSubscriptionContext)-> None:
+    try:
+        log = handler_context.result
+        event_abi = {
+            "anonymous":False,"inputs":[{"indexed":False,"internalType":"address","name":"_user","type":"address"},{"indexed":False,"internalType":"string","name":"imageUrl","type":"string"},{"indexed":False,"internalType":"string","name":"review","type":"string"}],"name":"ImageReviewed","type":"event"
+                     }
+        w3 = handler_context.async_w3
+        decoded = get_event_data(w3.codec, event_abi, log)
+        urls = decoded["args"]["imageUrl"].split("$$$")
+        print("New ReviewImage Event:")
+        print(f"User: {decoded['args']['_user']}")
+        print(f"URL: {decoded['args']['imageUrl']}")
+        print(f"Transaction Hash: {log['transactionHash'].hex() if hasattr(log['transactionHash'], 'hex') else log['transactionHash']}")
+        user = decoded["args"]["_user"]
+        review = decoded["args"]["review"]
+        for url in urls:
+            web3 = Web3(Web3.HTTPProvider(os.getenv('HTTP_PROVIDER_1')))
+            if not web3.is_connected():
+                print("Failed to connect to Ethereum network")
+                return False
+            
+            print("Connected to Ethereum network")
+        
+            contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=abi)
+            print(f"Contract loaded at address: {CONTRACT_ADDRESS}")
+        
+            print("Fetching Farmer information from blockchain...")
+            farmer_info = contract.functions.farmer_map(user).call()
+            aadharId = farmer_info[1]
+            print(f"Farmer Aadhar ID: {aadharId}")
+            MAX_BODY_LENGTH = 200
+            body = review
+            if len(body) > MAX_BODY_LENGTH:
+                body = body[:MAX_BODY_LENGTH].rstrip() + "..."
+            await sendNotification(aadharId,title = "Review Done",body = "Review : "+ body)
+    except Exception as e:
+        print(f"Error in ReviewImageLogHandler: {e}")
 
 async def sub_manager():
     max_retries = 5
@@ -136,10 +218,22 @@ async def sub_manager():
                         address=w3.to_checksum_address(CONTRACT_ADDRESS),
                         topics=[["0x2176ff554abc6afb8a3baf0448d7ff22c25829c4aee3806c623ed36edb2b2bba"]],
                         handler=log_handler,
+                    ),
+                    LogsSubscription(
+                        label="ImageVerified(address _user, string imageUrl, bool choice)",
+                        address=w3.to_checksum_address(CONTRACT_ADDRESS),
+                        topics = [["0x811381693377528cebff13805a15ecdd8b8745e5d843153d27b7a23ab6733e46"]],
+                        handler=verifyImageLogHandler
+                    ),
+                    LogsSubscription(
+                        label="ImageReviewed(address _user, string imageUrl, string review)",
+                        address = w3.to_checksum_address(CONTRACT_ADDRESS),
+                        topics=[["0x98447fabd9e6e9a59e9e562d0cd73d366a7debf8d288c2b2480fb475da688ca0"]],
+                        handler = ReviewImageLogHandler
                     )
                 ])
 
-                print("Subscribed to blockchain events. Waiting for ImageSubmitted events...")
+                print("Subscribed to blockchain events. Waiting for events...")
                 await w3.subscription_manager.handle_subscriptions()
             else:
                 print("Using HTTP provider - real-time events not available")
