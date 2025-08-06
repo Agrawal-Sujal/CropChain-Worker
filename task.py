@@ -78,6 +78,8 @@ async def log_handler(handler_context: LogsSubscriptionContext) -> None:
             # Get farmer info from blockchain
             print("Fetching farmer information from blockchain...")
             farmer_info = contract.functions.farmer_map(user).call()
+            plant_info = contract.functinos.images(url).call()
+            imageId = plant_info[0]
             aadharId = farmer_info[1]
             print(f"Farmer Aadhar ID: {aadharId}")
             title = "AI Review Done!!"
@@ -87,7 +89,7 @@ async def log_handler(handler_context: LogsSubscriptionContext) -> None:
             if len(body) > MAX_BODY_LENGTH:
                 body = body[:MAX_BODY_LENGTH].rstrip() + "..."
 
-            await sendNotification(aadharId,title,body)
+            await sendNotification(aadharId,title,body,imageId,2)
     except Exception as e:
         print(f"Error in log_handler: {e}")
 
@@ -126,7 +128,8 @@ async def verifyImageLogHandler(handler_context: LogsSubscriptionContext)-> None
                 body = "Your review got positive response"
             else :
                 body = "Your review got negative response"
-            await sendNotification(aadharId,title = "Review Verify",body = body)
+            title = "Review Verify"
+            await sendNotification(aadharId,title,body,1)
     except Exception as e:
         print(f"Error in verifyImageLogHandler: {e}")
 
@@ -164,7 +167,7 @@ async def ReviewImageLogHandler(handler_context: LogsSubscriptionContext)-> None
             body = review
             if len(body) > MAX_BODY_LENGTH:
                 body = body[:MAX_BODY_LENGTH].rstrip() + "..."
-            await sendNotification(aadharId,title = "Review Done",body = "Review : "+ body)
+            await sendNotification(aadharId,"Review Done","Review : "+ body,0)
     except Exception as e:
         print(f"Error in ReviewImageLogHandler: {e}")
 
