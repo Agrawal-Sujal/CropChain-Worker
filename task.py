@@ -78,7 +78,7 @@ async def log_handler(handler_context: LogsSubscriptionContext) -> None:
             # Get farmer info from blockchain
             print("Fetching farmer information from blockchain...")
             farmer_info = contract.functions.farmer_map(user).call()
-            plant_info = contract.functinos.images(url).call()
+            plant_info = contract.functions.images(url).call()
             imageId = plant_info[0]
             aadharId = farmer_info[1]
             print(f"Farmer Aadhar ID: {aadharId}")
